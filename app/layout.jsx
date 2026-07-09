@@ -45,7 +45,7 @@ export default async function RootLayout({ children }) {
           navbar={navbar}
           footer={footer}
           pageMap={await getPageMap()}
-          docsRepositoryBase="https://github.com/mochi-analytics/mochi/tree/main/docs"
+          docsRepositoryBase="https://github.com/mochi-analytics/docs/tree/main/content"
           editLink="Edit this page on GitHub"
           sidebar={{ defaultMenuCollapseLevel: 1 }}
         >
