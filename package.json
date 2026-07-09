@@ -4,6 +4,7 @@
   "private": true,
   "description": "Documentation site for Mochi — self-hosted analytics for Discord bots",
   "type": "module",
+  "packageManager": "pnpm@10.13.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
