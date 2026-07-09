@@ -1,0 +1,132 @@
+---
+title: Alerts & Digests
+description: Discord webhook alerts for downtime, error spikes, and server drops, plus a weekly digest.
+---
+
+import { Callout } from 'nextra/components'
+
+# Alerts & Digests
+
+Mochi can post to a Discord webhook when a bot goes quiet, starts failing, or
+loses servers — and can send a weekly summary of how it did. Configure it from
+the bot's **Settings → Alerts** page.
+
+<Callout type="warning">
+  Alerts only run when the server is started with `ALERTS=1` (the default in the
+  Docker Compose file). Without it, the configuration is saved but nothing is
+  ever evaluated.
+</Callout>
+
+A sweep runs **every minute** across all bots that have a config. Each rule
+holds its own state, so an alert doesn't re-fire while the condition persists.
+
+## The rules
+
+### Offline
+
+Fires when no [health snapshot](/ingest-api#post-apiv1snapshot) has arrived for
+`offlineAfterMinutes` (default **120**, min 5, max 1440). Sends **one** message
+when it trips, and one recovery message when snapshots resume.
+
+The default covers the SDKs' hourly snapshot cadence with one missed beat.
+
+<Callout type="info">
+  A bot with no snapshot in the last **7 days** is treated as decommissioned
+  rather than offline — otherwise a bot you shut down for good would alert
+  forever.
+</Callout>
+
+### Error spike
+
+Fires when the command failure rate over the last **15 minutes** is at or above
+`errorRatePct` (default **10**, range 1–100).
+
+Two guards keep it quiet: the window needs at least **20 commands** before it
+can trip (so one failure out of two doesn't page you), and it fires at most
+**once per hour** while the rate stays high.
+
+The message includes the command count, failure count, and `error`-type event
+count for the window.
+
+### Server drop
+
+Fires when the guild count has fallen by at least `guildDropPct` percent
+(default **5**, range 1–100) versus 24 hours ago. Requires at least **10**
+servers in the earlier sample, and fires at most **once per day**.
+
+Guild counts are summed from the latest snapshot per shard.
+
+### Weekly digest
+
+Off by default. When enabled, posts a summary of the previous seven days on the
+first sweep at or after **Monday 00:00 UTC**: servers (with net change),
+commands, unique users, error rate, p95 latency, the top 5 commands, and the top
+3 errors.
+
+## Webhook URL
+
+Only real Discord webhook URLs are accepted, matching:
+
+```text
+https://discord.com/api/webhooks/{id}/{token}
+```
+
+`canary.`, `ptb.`, and the legacy `discordapp.com` host are allowed too. The URL
+is validated when it's saved **and again at send time**, so a stored config can
+never be pointed at an internal service.
+
+## Configuration API
+
+All three endpoints require a session with write access to the bot.
+
+### GET `/api/bots/{botId}/alerts`
+
+```json
+{
+  "config": {
+    "botId": "…",
+    "webhookUrl": "https://discord.com/api/webhooks/…",
+    "offlineEnabled": true,
+    "offlineAfterMinutes": 120,
+    "errorSpikeEnabled": true,
+    "errorRatePct": 10,
+    "guildDropEnabled": true,
+    "guildDropPct": 5,
+    "digestEnabled": false,
+    "createdAt": "2026-07-01T00:00:00.000Z"
+  }
+}
+```
+
+`config` is `null` when the bot has no alert configuration.
+
+### PUT `/api/bots/{botId}/alerts`
+
+Creates or replaces the configuration. Every field is required.
+
+| Field | Type | Constraint |
+|---|---|---|
+| `webhookUrl` | string ≤400 | must be a Discord webhook URL |
+| `offlineEnabled` | boolean | |
+| `offlineAfterMinutes` | int | 5–1440 |
+| `errorSpikeEnabled` | boolean | |
+| `errorRatePct` | int | 1–100 |
+| `guildDropEnabled` | boolean | |
+| `guildDropPct` | int | 1–100 |
+| `digestEnabled` | boolean | |
+
+### DELETE `/api/bots/{botId}/alerts`
+
+Removes the configuration and any accumulated alert state.
+
+### POST `/api/bots/{botId}/alerts/test`
+
+Sends a test embed to the given webhook, or to the saved one if the body is
+empty. Useful for validating a URL before saving it.
+
+```json
+{ "webhookUrl": "https://discord.com/api/webhooks/…" }
+```
+
+Returns `400` when no URL is configured, and `502` when Discord rejects the
+message.

@@ -80,3 +80,12 @@ join/leave events are missed while the bot is offline.
 
 For sharded bots, send one snapshot per shard with that shard's local
 `guildCount`; Mochi sums the latest snapshot per shard.
+
+Snapshots are also what the [offline alert](/alerts#offline) watches: a bot that
+stops sending them is a bot that looks down.
+
+## Reading data back
+
+The same API key authenticates the [Stats API](/stats-api), a read-only JSON
+endpoint for pulling your bot's own metrics back out. Both share the rate limit
+above.

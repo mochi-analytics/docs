@@ -1,0 +1,199 @@
+---
+title: Go SDK
+description: Instrument a discordgo bot with Mochi.
+---
+
+import { Callout } from 'nextra/components'
+
+# Go SDK
+
+Two independently versioned modules, mirroring the core/adapter split of the
+JS and Python SDKs:
+
+- `github.com/mochi-analytics/mochi-go` — the **core client**. A batching,
+  non-blocking HTTP client for the ingest and snapshot APIs. **Zero
+  dependencies** (stdlib only).
+- `github.com/mochi-analytics/mochi-go/discordgo` — the
+  [discordgo](https://github.com/bwmarrin/discordgo) adapter.
+
+The adapter is a nested module so the core stays dependency-free: importing the
+core never pulls discordgo into your module graph.
+
+## Quick start
+
+```sh
+go get github.com/mochi-analytics/mochi-go/discordgo
+```
+
+```go
+package main
+
+import (
+    "os"
+
+    dgo "github.com/bwmarrin/discordgo"
+    mochi "github.com/mochi-analytics/mochi-go"
+    mochidgo "github.com/mochi-analytics/mochi-go/discordgo"
+)
+
+func main() {
+    session, _ := dgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
+
+    client := mochi.New(mochi.Options{
+        URL:    "https://mochi.example.com",   // your Mochi instance
+        APIKey: os.Getenv("MOCHI_API_KEY"),    // from the bot's settings page
+    })
+    defer client.Shutdown() // flush remaining events on exit
+
+    detach := mochidgo.Attach(session, client, mochidgo.Options{})
+    defer detach()
+
+    session.Open()
+    // ... block until shutdown
+}
+```
+
+That's it. Mochi now records slash and context-menu command usage, guild joins
+and leaves, and an hourly server-count snapshot.
+
+`Attach` returns a `detach` function that removes every handler and stops the
+snapshot loop.
+
+## Adapter options
+
+```go
+mochidgo.Attach(session, client, mochidgo.Options{
+    IncludeGuildNames:        true,               // guild names in join/leave metadata
+    IgnoreCommands:           []string{"ping"},   // skip noisy commands
+    SnapshotInterval:         30 * time.Minute,   // default 1 hour
+    DisableAutoTrackCommands: true,               // see "accurate timings" below
+})
+```
+
+<Callout type="info">
+  `DisableAutoTrackCommands` is the inverse of `autoTrackCommands` in the JS and
+  Python SDKs, so that the Go zero value keeps auto-tracking on.
+</Callout>
+
+## Accurate duration & success
+
+Auto-tracking records commands the moment the interaction arrives — it can't see
+whether your handler succeeded or how long it took. For that, disable
+auto-tracking and wrap your handlers:
+
+```go
+mochidgo.Attach(session, client, mochidgo.Options{DisableAutoTrackCommands: true})
+
+session.AddHandler(mochidgo.WrapHandler(client, func(s *dgo.Session, ic *dgo.InteractionCreate) {
+    // your command logic — duration and panics are recorded
+}))
+```
+
+A panicking handler is recorded as a failure and the panic is re-raised
+unchanged.
+
+## Core client
+
+Use the core directly for any bot library, or for events the adapter doesn't
+cover.
+
+```go
+client := mochi.New(mochi.Options{
+    URL:    "https://mochi.example.com",
+    APIKey: os.Getenv("MOCHI_API_KEY"),
+})
+defer client.Shutdown()
+
+client.TrackCommand("play", mochi.Event{
+    GuildID: "935512380767846400",
+    UserID:  "102992563902441472",
+    ShardID: mochi.Ptr(0),
+})
+```
+
+### Custom events
+
+```go
+client.Track(mochi.Event{
+    Type:    mochi.EventCustom,
+    Name:    "premium_purchased",
+    GuildID: guildID,
+    UserID:  userID,
+    Meta:    map[string]any{"tier": "gold"},
+})
+```
+
+Event types are `mochi.EventCommand`, `EventGuildJoin`, `EventGuildLeave`,
+`EventError`, and `EventCustom`. See the [Ingest API](/ingest-api) for what each
+field means.
+
+### Snapshots
+
+```go
+client.Snapshot(mochi.Snapshot{
+    GuildCount:  len(session.State.Guilds),
+    ShardID:     mochi.Ptr(session.ShardID),
+    TotalShards: mochi.Ptr(session.ShardCount),
+    WsPingMs:    mochi.Ptr(int(session.HeartbeatLatency().Milliseconds())),
+})
+```
+
+`Snapshot` sends **synchronously** with retries, as the core spec requires, and
+routes failures to `OnError`. Call it in a goroutine if you don't want to block.
+The discordgo adapter already does this for you on an interval.
+
+### Client options
+
+| Option | Default | Purpose |
+|---|---|---|
+| `URL` | — | Base URL of your Mochi instance |
+| `APIKey` | — | Per-bot key, `mochi_sk_…` |
+| `FlushInterval` | `5s` | Background flush cadence |
+| `MaxBatchSize` | `100` | Events per request; clamped to ≤100 |
+| `MaxQueueSize` | `10000` | Queue bound; overflow drops oldest-first |
+| `MaxRetries` | `3` | Retry attempts for retryable failures |
+| `OnError` | no-op | Called on drops and permanent failures |
+| `HTTPClient` | 10 s timeout | Backs the default transport |
+
+Zero-valued numeric fields take their default.
+
+## Optional scalars are pointers
+
+`ShardID`, `Success`, and `DurationMs` are `*int` / `*bool` so a meaningful zero
+(`shardId: 0`, `success: false`) is sent rather than dropped by `omitempty`. Use
+`mochi.Ptr(v)` to set them:
+
+```go
+client.Track(mochi.Event{
+    Type:       mochi.EventCommand,
+    Name:       "play",
+    Success:    mochi.Ptr(false),
+    DurationMs: mochi.Ptr(0),
+})
+```
+
+## discordgo-specific behavior
+
+Two things worth knowing, both handled for you:
+
+- **`GuildCreate` is replayed for every guild on connect.** The adapter seeds a
+  known-guild set from `Ready`, so a restart never emits phantom `guild_join`
+  events. Only guilds first seen *after* `Ready` count as joins.
+- **`GuildDelete` with `Unavailable: true` is a Discord outage**, not a leave,
+  and is ignored.
+
+## Design guarantees
+
+- Events are batched (flushed every 5 s or 100 events) and sent in the
+  background — `Track` returns immediately and never panics into the caller.
+- Transient failures retry with backoff; `Retry-After` is honored on `429`
+  (delta-seconds or HTTP-date) in preference to the exponential backoff.
+- The queue is bounded (oldest dropped first), so a dead Mochi instance can
+  never leak memory or crash the bot.
+- A panicking `OnError` handler can never crash the bot.
+- Raw user ids are hashed server-side with a per-bot salt and never stored.
+
+<Callout type="info">
+  Everything above is a thin wrapper over two HTTP endpoints — see the
+  [Ingest API](/ingest-api) to integrate from any other framework.
+</Callout>

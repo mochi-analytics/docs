@@ -1,54 +1,160 @@
 ---
-title: Introduction
-description: Self-hosted analytics for Discord bots — command usage, server growth, and bot health in one dashboard.
+title: Self-hosted analytics for Discord bots
+description: Mochi tracks command usage, server growth, and bot health in one dashboard you run yourself. Open source and privacy-friendly.
 ---
 
-import { Cards } from 'nextra/components'
+import styles from '../components/landing.module.css'
+import { ShieldCheck, BarChart3, TrendingUp, Activity, Zap, Share2 } from 'lucide-react'
 
-# Mochi
+<div className={styles.landing}>
 
-Self-hosted analytics for Discord bots: command usage, server growth, and bot
-health in one dashboard. You run it, you own the data.
+<section className={styles.hero}>
+  <img src="/logo.svg" alt="" width="88" height="88" className={styles.heroLogo} />
 
-## Features
+  <span className={styles.badge}>Free & open source · AGPL server · Apache-2.0 SDKs</span>
 
-- **Privacy-friendly** — raw user ids are hashed server-side with a per-bot salt
-  and never stored.
-- **Command analytics** — usage counts, success rate, latency, and unique-user
-  metrics.
-- **Growth tracking** — guild joins, leaves, and churn over time.
-- **Custom events** — attach your own metadata for anything the built-in events
-  don't cover.
-- **Realtime activity feed** — watch events land as they happen.
-- **Public share links** — read-only dashboards you can hand to your community.
-- **Per-bot controls** — API keys, retention settings, and salt rotation.
+  <h1 className={styles.title}>
+    Analytics for Discord bots,<br /><br />on <span className={styles.titleAccent}>your</span> infrastructure
+  </h1>
 
-## How it works
+  <p className={styles.subtitle}>
+    Mochi tracks command usage, server growth, and bot health in one dashboard.
+    You run it, you own the data — raw user ids are hashed with a per-bot salt
+    and never stored.
+  </p>
 
-A bot sends events to your Mochi instance through one of the SDKs (or the raw
-[Ingest API](/ingest-api)). Mochi stores them in ClickHouse, hashes user ids so
-you never hold raw identifiers, and renders everything in a Next.js dashboard.
+  <div className={styles.ctaRow}>
+    <a href="/self-hosting" className={styles.btnPrimary}>Get started</a>
+    <a href="https://github.com/mochi-analytics/mochi" className={styles.btnSecondary}>View on GitHub</a>
+  </div>
+</section>
 
-```mermaid
-graph LR
-  A[Your Discord bot] -->|SDK / Ingest API| B[Mochi instance]
-  B --> C[(ClickHouse\nevents)]
-  B --> D[(Postgres\naccounts + config)]
-  B --> E[Dashboard]
+<section className={styles.section}>
+  <h2 className={styles.sectionTitle}>Everything your bot is telling you, in one place</h2>
+
+  <div className={styles.grid}>
+    <div className={styles.card}>
+      <span className={styles.cardIcon} aria-hidden><ShieldCheck /></span>
+      <h3 className={styles.cardTitle}>Privacy-friendly by design</h3>
+      <p className={styles.cardText}>
+        User ids are hashed server-side before they ever touch disk. No raw
+        identifiers, no tracking pixels, no third parties.
+      </p>
+    </div>
+    <div className={styles.card}>
+      <span className={styles.cardIcon} aria-hidden><BarChart3 /></span>
+      <h3 className={styles.cardTitle}>Command analytics</h3>
+      <p className={styles.cardText}>
+        Usage counts, success rate, latency, and unique users for every
+        command — with previous-period comparison.
+      </p>
+    </div>
+    <div className={styles.card}>
+      <span className={styles.cardIcon} aria-hidden><TrendingUp /></span>
+      <h3 className={styles.cardTitle}>Growth tracking</h3>
+      <p className={styles.cardText}>
+        Guild joins, leaves, and churn over time, so you know whether that
+        update actually moved the needle.
+      </p>
+    </div>
+    <div className={styles.card}>
+      <span className={styles.cardIcon} aria-hidden><Activity /></span>
+      <h3 className={styles.cardTitle}>Health & alerts</h3>
+      <p className={styles.cardText}>
+        Per-shard status, gateway ping, and uptime, plus <a href="/alerts">Discord
+        webhook alerts</a> for downtime, error spikes, and server drops.
+      </p>
+    </div>
+    <div className={styles.card}>
+      <span className={styles.cardIcon} aria-hidden><Zap /></span>
+      <h3 className={styles.cardTitle}>Custom events & realtime</h3>
+      <p className={styles.cardText}>
+        Track anything the built-in events don't cover, and watch it land live
+        in the realtime activity feed.
+      </p>
+    </div>
+    <div className={styles.card}>
+      <span className={styles.cardIcon} aria-hidden><Share2 /></span>
+      <h3 className={styles.cardTitle}>Sharing & exports</h3>
+      <p className={styles.cardText}>
+        Public read-only dashboards, README badges, CSV/JSON <a href="/exports">exports</a>,
+        and a <a href="/stats-api">Stats API</a> for your own <code>/stats</code> command.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section className={styles.section}>
+  <h2 className={styles.sectionTitle}>Up and running in minutes</h2>
+  <p className={styles.sectionLead}>
+    One app container plus Postgres and ClickHouse. A 2&nbsp;GB VPS handles it
+    comfortably.
+  </p>
+
+  <div className={styles.steps}>
+    <div>
+      <h3 className={styles.stepTitle}>
+        <span className={styles.stepNum}>1</span> Start your instance
+      </h3>
+
+```sh
+git clone https://github.com/mochi-analytics/mochi
+cd mochi
+POSTGRES_PASSWORD=$(openssl rand -hex 16) \
+CLICKHOUSE_PASSWORD=$(openssl rand -hex 16) \
+docker compose -f docker/docker-compose.yml up -d
 ```
 
-## Next steps
+    </div>
+    <div>
+      <h3 className={styles.stepTitle}>
+        <span className={styles.stepNum}>2</span> Attach an SDK
+      </h3>
 
-<Cards num={2}>
-  <Cards.Card title="Self-Hosting" href="/self-hosting" arrow />
-  <Cards.Card title="discord.js SDK" href="/sdks/discordjs" arrow />
-  <Cards.Card title="discord.py SDK" href="/sdks/discordpy" arrow />
-  <Cards.Card title="Ingest API" href="/ingest-api" arrow />
-</Cards>
+```ts
+import { MochiClient } from "@mochi-analytics/core";
+import { attachMochi } from "@mochi-analytics/discordjs";
 
-## License
+const mochi = new MochiClient({
+  url: "https://mochi.example.com",
+  apiKey: process.env.MOCHI_API_KEY,
+});
 
-The Mochi server is licensed under `AGPL-3.0-or-later`. The SDKs are
-`Apache-2.0`. The Mochi name, logos, and branding are not covered by these
-licenses and may not be used to imply endorsement or to operate a confusingly
-similar hosted service.
+attachMochi(client, mochi);
+```
+
+    </div>
+  </div>
+
+  <p className={styles.stepNote}>
+    SDKs for <a href="/sdks/discordjs">discord.js</a>, <a href="/sdks/discordpy">discord.py</a>,
+    and <a href="/sdks/go">discordgo</a> — or send events from any language with
+    the raw <a href="/ingest-api">Ingest API</a>.
+  </p>
+</section>
+
+<section className={styles.footerCta}>
+  <h2 className={styles.sectionTitle}>Own your bot's analytics</h2>
+  <p className={styles.sectionLead}>
+    Spin up Mochi with Docker Compose and see your first events land in the
+    dashboard tonight.
+  </p>
+  <div className={styles.ctaRow}>
+    <a href="/self-hosting" className={styles.btnPrimary}>Get started</a>
+    <a href="/introduction" className={styles.btnSecondary}>Read the docs</a>
+  </div>
+</section>
+
+<aside className={styles.logoNote}>
+  <img src="/logo.svg" alt="" width="48" height="48" className={styles.logoNoteIcon} />
+  <p className={styles.logoNoteText}>
+    <strong>Help wanted: a better logo.</strong> This mascot was drawn by a
+    developer, not a designer, and it shows. It's a placeholder, and we'd love
+    for someone to replace it — ideally an SVG that still reads at 16&nbsp;px and
+    works on both light and dark backgrounds.{' '}
+    <a href="https://github.com/mochi-analytics/mochi/issues">Open an issue or a PR</a>{' '}
+    if you'd like to take a pass at it.
+  </p>
+</aside>
+
+</div>

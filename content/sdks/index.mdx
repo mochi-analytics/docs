@@ -17,6 +17,9 @@ nothing client-side, and never block or crash your bot. Pick your language:
   <Cards.Card title="discord.py (Python)" href="/sdks/discordpy" arrow>
     `mochi-analytics` + `mochi-analytics-discordpy`
   </Cards.Card>
+  <Cards.Card title="discordgo (Go)" href="/sdks/go" arrow>
+    `mochi-go` + `mochi-go/discordgo`
+  </Cards.Card>
 </Cards>
 
 ## Another language or library?
@@ -26,7 +29,8 @@ those two endpoints to instrument serenity, JDA, or anything else.
 
 ## Shared design guarantees
 
-Both official SDKs share the same behavior:
+Every official SDK implements the same [core spec][core] and shares the same
+behavior:
 
 - Events are **batched** (flushed every 5 s or 100 events) and sent in the
   background — `track()` never blocks or throws.
@@ -34,3 +38,9 @@ Both official SDKs share the same behavior:
   dropped first), so a dead Mochi instance can never leak memory or crash the
   bot.
 - Raw user ids are **hashed server-side** with a per-bot salt and never stored.
+
+Each is split into a **core client** (transport, batching, retries) and a
+**framework adapter** (event hooks), so the core never pulls your bot library
+into its dependency graph.
+
+[core]: https://github.com/mochi-analytics/core

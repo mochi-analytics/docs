@@ -8,14 +8,20 @@ export const metadata = {
     default: 'Mochi Docs',
     template: '%s – Mochi'
   },
-  description: 'Self-hosted analytics for Discord bots — command usage, server growth, and bot health in one dashboard.'
+  description: 'Self-hosted analytics for Discord bots — command usage, server growth, and bot health in one dashboard.',
+  icons: {
+    icon: '/logo.svg',
+    apple: '/apple-touch-icon.png'
+  }
 }
 
 const navbar = (
   <Navbar
     logo={
       <span style={{ display: 'flex', alignItems: 'center', gap: '.5rem', fontWeight: 700 }}>
-        <span aria-hidden style={{ fontSize: '1.25rem' }}>🍡</span>
+        {/* Plain <img>, not next/image: the optimizer is off under `output: 'export'`
+            anyway, and an <img> lets the SVG's own prefers-color-scheme rules run. */}
+        <img src="/logo.svg" alt="" width="28" height="28" />
         Mochi
       </span>
     }

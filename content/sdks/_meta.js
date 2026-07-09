@@ -1,5 +1,6 @@
 export default {
   index: 'Overview',
   discordjs: 'discord.js (JS/TS)',
-  discordpy: 'discord.py (Python)'
+  discordpy: 'discord.py (Python)',
+  go: 'discordgo (Go)'
 }

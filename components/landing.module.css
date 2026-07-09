@@ -1,0 +1,283 @@
+.landing {
+  --l-accent: hsl(330 70% 45%);
+  --l-accent-soft: hsl(330 70% 45% / 0.09);
+  --l-border: hsl(330 10% 87%);
+  --l-card-bg: hsl(0 0% 100% / 0.55);
+  --l-muted: hsl(215 15% 38%);
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+
+:global(.dark) .landing {
+  --l-accent: hsl(330 85% 73%);
+  --l-accent-soft: hsl(330 85% 73% / 0.1);
+  --l-border: hsl(330 8% 22%);
+  --l-card-bg: hsl(0 0% 100% / 0.04);
+  --l-muted: hsl(215 12% 66%);
+}
+
+/* Hero */
+
+.hero {
+  text-align: center;
+  padding: 3.5rem 0 1rem;
+}
+
+.heroLogo {
+  display: block;
+  margin: 0 auto 1.5rem;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.8125rem;
+  padding: 0.3rem 0.9rem;
+  border: 1px solid var(--l-border);
+  border-radius: 999px;
+  color: var(--l-muted);
+  margin-bottom: 1.75rem;
+}
+
+.title {
+  font-size: clamp(2.25rem, 6vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.titleAccent {
+  color: var(--l-accent);
+}
+
+.subtitle {
+  max-width: 42rem;
+  margin: 1.5rem auto 0;
+  font-size: 1.125rem;
+  line-height: 1.65;
+  color: var(--l-muted);
+}
+
+.ctaRow {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 2.25rem;
+}
+
+.btnPrimary,
+.btnSecondary {
+  display: inline-block;
+  padding: 0.65rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  transition: filter 0.15s, background-color 0.15s;
+}
+
+.btnPrimary {
+  background: var(--l-accent);
+  color: #fff;
+}
+
+:global(.dark) .btnPrimary {
+  color: hsl(330 50% 12%);
+}
+
+.btnPrimary:hover {
+  filter: brightness(1.1);
+}
+
+.btnSecondary {
+  border: 1px solid var(--l-border);
+}
+
+.btnSecondary:hover {
+  background: var(--l-accent-soft);
+}
+
+/* Sections */
+
+.section {
+  margin-top: 5rem;
+}
+
+.sectionTitle {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-align: center;
+  margin: 0;
+}
+
+.sectionLead {
+  text-align: center;
+  color: var(--l-muted);
+  max-width: 38rem;
+  margin: 0.75rem auto 0;
+  line-height: 1.6;
+}
+
+/* Feature grid */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+
+@media (max-width: 880px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  border: 1px solid var(--l-border);
+  background: var(--l-card-bg);
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.25rem 1.4rem;
+}
+
+.cardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  background: var(--l-accent-soft);
+  color: var(--l-accent);
+}
+
+.cardIcon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.cardTitle {
+  font-weight: 650;
+  margin: 0.6rem 0 0.35rem;
+}
+
+.cardText {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--l-muted);
+  margin: 0;
+}
+
+.cardText a {
+  color: var(--l-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Quickstart steps */
+
+.steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.75rem;
+  align-items: start;
+  margin-top: 2.5rem;
+}
+
+@media (max-width: 880px) {
+  .steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stepTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  font-size: 1.0625rem;
+  margin: 0 0 0.25rem;
+}
+
+.stepNum {
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--l-accent-soft);
+  color: var(--l-accent);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.stepNote {
+  text-align: center;
+  color: var(--l-muted);
+  font-size: 0.9375rem;
+  margin-top: 2rem;
+}
+
+.stepNote a {
+  color: var(--l-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Bottom CTA */
+
+.footerCta {
+  margin-top: 5.5rem;
+  padding: 3.25rem 1.5rem;
+  text-align: center;
+  border: 1px solid var(--l-border);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, var(--l-accent-soft), transparent);
+}
+
+/* Call for a better logo. Dashed border, no fill: reads as an aside rather than
+   competing with the CTA directly above it. */
+
+.logoNote {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  margin-top: 2rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px dashed var(--l-border);
+  border-radius: 0.75rem;
+}
+
+.logoNoteIcon {
+  flex: none;
+}
+
+.logoNoteText {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--l-muted);
+  margin: 0;
+}
+
+.logoNoteText a {
+  color: var(--l-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .logoNote {
+    flex-direction: column;
+    text-align: center;
+  }
+}

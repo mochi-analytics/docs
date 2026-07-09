@@ -51,9 +51,10 @@ admin account.
 
 </Steps>
 
-Migrations run automatically at startup (`MIGRATE_ON_START=1`), and a daily job
-enforces each bot's retention setting (`RETENTION_CLEANUP=1`). Set either to `0`
-to manage these yourself.
+Three background jobs are on by default in the compose file: migrations run at
+startup (`MIGRATE_ON_START=1`), a daily job enforces each bot's retention
+setting (`RETENTION_CLEANUP=1`), and a sweep evaluates [alert rules](/alerts)
+every minute (`ALERTS=1`). Set any of them to `0` to manage that yourself.
 
 ## Environment variables
 
@@ -63,6 +64,13 @@ to manage these yourself.
 | `CLICKHOUSE_URL` / `CLICKHOUSE_USER` / `CLICKHOUSE_PASSWORD` / `CLICKHOUSE_DB` | ClickHouse connection |
 | `MIGRATE_ON_START` | `1` = apply migrations at boot |
 | `RETENTION_CLEANUP` | `1` = daily retention cleanup |
+| `ALERTS` | `1` = evaluate alert rules and weekly digests every minute |
+
+<Callout type="info">
+  Running several Mochi containers against one database? Set `ALERTS=1` on
+  exactly one of them. The sweep takes no cross-instance lock, so every instance
+  that has it enabled will evaluate — and post — the same alerts.
+</Callout>
 
 ## Upgrading
 

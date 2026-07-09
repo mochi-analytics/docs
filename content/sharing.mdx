@@ -1,0 +1,109 @@
+---
+title: Sharing & Embeds
+description: Public read-only dashboards, README badges, and embeddable stat widgets.
+---
+
+import { Callout } from 'nextra/components'
+
+# Sharing & Embeds
+
+Sharing is off by default. Turning it on mints a random **share id** — an
+unguessable UUID that acts as the public, read-only key to that bot's numbers.
+Everything on this page is addressed by that id, so nothing is exposed until you
+opt in.
+
+Enable it from the bot's **Settings → Sharing** page, or via the API:
+
+```sh
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"enabled": true}' \
+  --cookie "$SESSION" \
+  https://mochi.example.com/api/bots/$BOT_ID/share
+```
+
+```json
+{ "shareId": "0f9c4c2e-6a1b-4a0e-9f4b-2d8c1e7a55b1" }
+```
+
+Disabling sets `shareId` to `null`.
+
+<Callout type="warning">
+  Disabling and re-enabling issues a **fresh** id. That revokes every old link,
+  badge, and embed — which is exactly how you rotate a share id that leaked.
+</Callout>
+
+## Public dashboard
+
+```text
+https://mochi.example.com/share/{shareId}
+```
+
+A read-only version of the bot's overview: server count, command volume, unique
+users, error rate, and the growth charts. No account needed, nothing editable,
+no raw user ids (Mochi never stores them).
+
+## Badges
+
+```text
+GET /api/badge/{shareId}
+```
+
+An SVG stat badge for a README or website. Responses are cached for 5 minutes.
+
+| Parameter | Values | Default |
+|---|---|---|
+| `metric` | `servers`, `commands`, `users`, `uptime` | `servers` |
+| `range` | `24h`, `7d`, `30d`, `90d` | `30d` |
+| `format` | `svg`, `shields` | `svg` |
+
+`servers` is the current count and ignores `range`; the rest are range
+aggregates and say so in the label (`commands (7d)`). `uptime` renders `n/a`
+when there are no health snapshots in the range. An unrecognized `metric` falls
+back to `servers`.
+
+```md
+![Servers](https://mochi.example.com/api/badge/0f9c4c2e-…)
+![Commands](https://mochi.example.com/api/badge/0f9c4c2e-…?metric=commands&range=7d)
+```
+
+### shields.io
+
+`?format=shields` returns a [shields.io endpoint badge][endpoint] JSON payload
+instead of SVG, so you can restyle it with shields' own flags:
+
+```md
+![Servers](https://img.shields.io/endpoint?url=https://mochi.example.com/api/badge/0f9c4c2e-…%3Fmetric%3Dservers&style=flat-square)
+```
+
+Remember to URL-encode the query string of the inner URL (`?` → `%3F`,
+`&` → `%26`).
+
+[endpoint]: https://shields.io/badges/endpoint-badge
+
+## Embeddable widget
+
+```text
+https://mochi.example.com/share/{shareId}/widget
+```
+
+A compact stat card (~640×130) showing servers, commands, unique users, and
+error rate — designed to be dropped into an iframe on a bot-list page.
+
+| Parameter | Values | Default |
+|---|---|---|
+| `range` | `24h`, `7d`, `30d`, `90d` | `30d` |
+| `theme` | `light`, `dark` | `light` |
+
+```html
+<iframe
+  src="https://mochi.example.com/share/0f9c4c2e-…/widget?range=7d&theme=dark"
+  width="640" height="130" frameborder="0" loading="lazy"
+></iframe>
+```
+
+The card links back to the full public dashboard.
+
+<Callout type="info">
+  Need the numbers as data rather than pixels? The [Stats API](/stats-api)
+  returns JSON — but it authenticates with your API key, so keep it server-side.
+</Callout>

@@ -1,0 +1,128 @@
+---
+title: Stats API
+description: Read your own numbers back out of Mochi with the same API key you ingest with.
+---
+
+import { Callout } from 'nextra/components'
+
+# Stats API
+
+A read-only JSON API for pulling your bot's own metrics into a status command, a
+bot-list page, or an external dashboard.
+
+<Callout type="info">
+  **Authentication:** the same per-bot API key as ingest, as
+  `Authorization: Bearer mochi_sk_…`. The key scopes every response to its own
+  bot, so there is no bot id in the path.
+</Callout>
+
+It also shares the [ingest rate limit](/ingest-api#post-apiv1ingest) — 120
+requests/min per key, bursting to 240. Cache the results if you're calling this
+from a hot path like a `/stats` command.
+
+## Ranges
+
+Every endpoint takes an optional `range` of `24h`, `7d`, `30d`, or `90d`.
+Anything else falls back to **`30d`**.
+
+## GET `/api/v1/stats/overview`
+
+Headline numbers for the range, plus uptime.
+
+```sh
+curl -H "Authorization: Bearer $MOCHI_API_KEY" \
+  "https://mochi.example.com/api/v1/stats/overview?range=7d"
+```
+
+```json
+{
+  "range": "7d",
+  "guildCount": 1204,
+  "commands": 48213,
+  "uniqueUsers": 9847,
+  "errorRate": 0.42,
+  "p95Ms": 310,
+  "joins": 62,
+  "leaves": 18,
+  "uptimePct": 99.86
+}
+```
+
+`guildCount` is the current total (summed across shards), not a range
+aggregate. `errorRate` and `uptimePct` are percentages. `uptimePct` is `null`
+when no health snapshots landed in the range.
+
+## GET `/api/v1/stats/commands`
+
+Top commands by use count. `limit` defaults to `50`, clamped to `1…100`.
+
+```json
+{
+  "range": "30d",
+  "commands": [
+    { "name": "play", "uses": 18402, "users": 5210, "successRate": 99.4, "p50": 88, "p95": 310 }
+  ]
+}
+```
+
+Latencies are milliseconds and only count commands that reported a duration.
+
+## GET `/api/v1/stats/errors`
+
+Top `error`-type events by count. `limit` behaves as above.
+
+```json
+{
+  "range": "30d",
+  "errors": [
+    {
+      "name": "VoiceConnectionTimeout",
+      "count": 143,
+      "users": 91,
+      "firstSeen": "2026-06-11T09:14:02.000Z",
+      "lastSeen": "2026-07-08T22:41:55.000Z"
+    }
+  ]
+}
+```
+
+## GET `/api/v1/stats/series`
+
+A gap-filled time series. `metric` is `commands` (default) or `errors`.
+
+```sh
+curl -H "Authorization: Bearer $MOCHI_API_KEY" \
+  "https://mochi.example.com/api/v1/stats/series?metric=errors&range=24h"
+```
+
+Buckets are **hourly** for `24h` and **daily** for `7d`/`30d`/`90d`. Empty
+buckets are returned as zeros, so the array length is stable. `t` is a Unix
+timestamp in milliseconds.
+
+```json
+{
+  "range": "24h",
+  "metric": "errors",
+  "series": [
+    { "t": 1783252800000, "errors": 3, "failures": 11 }
+  ]
+}
+```
+
+`metric=commands` returns points of `{ "t": …, "value": … }` instead.
+
+Passing any other `metric` returns `400`.
+
+## Errors
+
+| Status | Meaning |
+|---|---|
+| `400` | Unknown `metric` |
+| `401` | Missing, malformed, or revoked API key |
+| `404` | Unknown view — use `overview`, `commands`, `errors`, or `series` |
+| `429` | Rate limited; respect `Retry-After` |
+
+## Related
+
+Prefer a file to a JSON payload? See [Exports](/exports). Want numbers on a
+public page without handing out an API key? See [Sharing & Embeds](/sharing).
