@@ -1,0 +1,111 @@
+---
+title: hikari SDK
+description: Instrument a hikari bot with Mochi.
+---
+
+import { Callout } from 'nextra/components'
+
+# hikari SDK
+
+```sh
+pip install mochi-analytics mochi-analytics-hikari
+```
+
+Requires Python 3.10+.
+
+## Quick start
+
+```python
+import os
+import hikari
+from mochi_analytics import MochiClient
+from mochi_analytics_hikari import attach_mochi
+
+mochi = MochiClient(
+    url="https://mochi.example.com",       # your Mochi instance
+    api_key=os.environ["MOCHI_API_KEY"],   # from the bot's settings page
+)
+
+bot = hikari.GatewayBot(token=os.environ["DISCORD_TOKEN"])
+attach_mochi(bot, mochi)
+
+bot.run()
+```
+
+That's it. Mochi now records slash/context-menu command usage, guild joins and
+leaves, and an hourly server-count snapshot.
+
+`attach_mochi` subscribes to `InteractionCreateEvent`, `GuildJoinEvent`,
+`GuildLeaveEvent` and `StartedEvent`, and returns a `detach` callable that
+unsubscribes all of them.
+
+## Sharding
+
+<Callout type="info">
+  hikari holds every shard in one process, so Mochi sends one snapshot per shard,
+  each carrying that shard's own guild count and heartbeat latency.
+</Callout>
+
+hikari does not attach a shard to an interaction, so a command event's shard id
+is derived from its guild id the same way Discord does — `(guild_id >> 22) %
+shard_count`.
+
+## Options
+
+```python
+attach_mochi(
+    bot,
+    mochi,
+    include_guild_names=True,   # put guild names in join/leave metadata
+    ignore_commands=["ping"],   # skip noisy commands
+    snapshot_interval=30 * 60,  # seconds; default 1 hour
+    auto_track_commands=False,  # see "accurate timings" below
+)
+```
+
+## Accurate duration & success
+
+hikari ships no command framework, so `attach_mochi` records commands straight
+off `InteractionCreateEvent` — which means it can't see whether your handler
+succeeded or how long it took. For that, disable auto-tracking and wrap your
+handlers:
+
+```python
+from mochi_analytics_hikari import wrap_command
+
+attach_mochi(bot, mochi, auto_track_commands=False)
+
+@wrap_command(mochi)
+async def play(interaction: hikari.CommandInteraction):
+    ...  # duration and raised exceptions are recorded
+```
+
+If you use a command framework on top of hikari (lightbulb, tanjun, …), call
+`wrap_command` on the callbacks it dispatches.
+
+## Custom events
+
+```python
+from mochi_analytics import MochiEvent
+
+mochi.track(MochiEvent(
+    type="custom",
+    name="premium_purchased",
+    user_id=str(interaction.user.id),
+    guild_id=str(interaction.guild_id) if interaction.guild_id else None,
+    meta={"tier": "gold"},
+))
+```
+
+## Design guarantees
+
+- Events are batched (flushed every 5 s or 100 events) and sent in the
+  background — `track()` never blocks or raises.
+- Transient failures retry with backoff; the queue is bounded (oldest dropped
+  first), so a dead Mochi instance can never leak memory or crash the bot.
+- Raw user ids are hashed server-side with a per-bot salt and never stored.
+
+<Callout type="info">
+  Everything above is a thin wrapper over two HTTP endpoints — see the
+  [Ingest API](/ingest-api) to integrate from any other framework.
+</Callout>

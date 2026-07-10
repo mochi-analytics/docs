@@ -1,0 +1,112 @@
+---
+title: interactions.py SDK
+description: Instrument an interactions.py bot with Mochi.
+---
+
+import { Callout } from 'nextra/components'
+
+# interactions.py SDK
+
+```sh
+pip install mochi-analytics mochi-analytics-interactions
+```
+
+Requires Python 3.10+. The PyPI distribution for interactions.py is
+`discord-py-interactions`; the import name is `interactions`.
+
+## Quick start
+
+```python
+import os
+import interactions
+from mochi_analytics import MochiClient
+from mochi_analytics_interactions import attach_mochi
+
+mochi = MochiClient(
+    url="https://mochi.example.com",       # your Mochi instance
+    api_key=os.environ["MOCHI_API_KEY"],   # from the bot's settings page
+)
+
+client = interactions.Client()
+attach_mochi(client, mochi)
+
+client.start(os.environ["DISCORD_TOKEN"])
+```
+
+That's it. Mochi now records slash/context-menu command usage, guild joins and
+leaves, and an hourly server-count snapshot.
+
+## How commands are recorded
+
+Commands are recorded on `CommandCompletion`, which interactions.py dispatches
+inside a `finally` — so it fires for failures too. A preceding `CommandError` is
+what marks an invocation unsuccessful, and the adapter listens to both to set
+`success` correctly.
+
+<Callout type="warning">
+  Neither event reports how long the command took, so `durationMs` is omitted
+  unless you wrap your callbacks — see below.
+</Callout>
+
+`GuildJoin` also fires once per cached guild while the bot starts up, so the
+adapter ignores it until the client reports ready — you won't see a burst of
+phantom joins on every restart.
+
+## Options
+
+```python
+attach_mochi(
+    client,
+    mochi,
+    include_guild_names=True,   # put guild names in join/leave metadata
+    ignore_commands=["ping"],   # skip noisy commands
+    snapshot_interval=30 * 60,  # seconds; default 1 hour
+    auto_track_commands=False,  # see "accurate timings" below
+)
+```
+
+An `AutoShardedClient` sends one snapshot per shard, each carrying that shard's
+own guild count.
+
+## Accurate duration & success
+
+To record duration, disable auto-tracking and wrap your callbacks. Leaving
+auto-tracking on would record every invocation twice.
+
+```python
+from mochi_analytics_interactions import wrap_command
+
+attach_mochi(client, mochi, auto_track_commands=False)
+
+@interactions.slash_command()
+@wrap_command(mochi)
+async def play(ctx: interactions.SlashContext):
+    ...  # duration and raised exceptions are recorded
+```
+
+## Custom events
+
+```python
+from mochi_analytics import MochiEvent
+
+mochi.track(MochiEvent(
+    type="custom",
+    name="premium_purchased",
+    user_id=str(ctx.author_id),
+    guild_id=str(ctx.guild_id) if ctx.guild_id else None,
+    meta={"tier": "gold"},
+))
+```
+
+## Design guarantees
+
+- Events are batched (flushed every 5 s or 100 events) and sent in the
+  background — `track()` never blocks or raises.
+- Transient failures retry with backoff; the queue is bounded (oldest dropped
+  first), so a dead Mochi instance can never leak memory or crash the bot.
+- Raw user ids are hashed server-side with a per-bot salt and never stored.
+
+<Callout type="info">
+  Everything above is a thin wrapper over two HTTP endpoints — see the
+  [Ingest API](/ingest-api) to integrate from any other framework.
+</Callout>

@@ -1,0 +1,98 @@
+---
+title: Sapphire SDK
+description: Instrument a Sapphire framework bot with Mochi.
+---
+
+import { Callout } from 'nextra/components'
+
+# Sapphire SDK
+
+```sh
+npm install @mochi-analytics/core @mochi-analytics/sapphire
+```
+
+## Quick start
+
+```ts
+import { SapphireClient } from "@sapphire/framework";
+import { GatewayIntentBits } from "discord.js";
+import { MochiClient } from "@mochi-analytics/core";
+import { attachMochi } from "@mochi-analytics/sapphire";
+
+const mochi = new MochiClient({
+  url: "https://mochi.example.com",   // your Mochi instance
+  apiKey: process.env.MOCHI_API_KEY!, // from the bot's settings page
+});
+
+const client = new SapphireClient({ intents: [GatewayIntentBits.Guilds] });
+attachMochi(client, mochi);
+
+client.login(process.env.DISCORD_TOKEN);
+
+process.on("SIGTERM", async () => {
+  await mochi.shutdown(); // flush remaining events
+  client.destroy();
+});
+```
+
+That's it. Mochi now records slash/context-menu command usage, guild joins and
+leaves, and an hourly server-count snapshot.
+
+## Duration & success come for free
+
+<Callout type="info">
+  There is no `wrapHandler` here. Sapphire reports the outcome and wall time of
+  every command through its `chatInputCommandFinish` and
+  `contextMenuCommandFinish` events, so `success` and `durationMs` are recorded
+  without touching your handlers.
+</Callout>
+
+## Options
+
+```ts
+attachMochi(client, mochi, {
+  includeGuildNames: true,        // put guild names in join/leave metadata
+  ignoreCommands: ["ping"],       // skip noisy commands
+  snapshotIntervalMs: 30 * 60e3,  // default 1 hour
+  autoTrackCommands: false,       // stop recording commands entirely
+  trackErrors: true,              // see below; default false
+});
+```
+
+### trackErrors
+
+With `trackErrors: true`, a rejected command also emits a Mochi `error` event
+carrying the thrown message, in addition to the command event that already
+reports `success: false`. It is off by default so event volume matches the other
+adapters.
+
+## Guild events and snapshots
+
+`SapphireClient` extends the discord.js `Client`, so guild joins/leaves and
+hourly snapshots are handled by `@mochi-analytics/discordjs` under the hood — it
+is installed as a dependency, not something you wire up yourself.
+
+## Custom events
+
+```ts
+mochi.track({
+  type: "custom",
+  name: "premium_purchased",
+  userId: interaction.user.id,
+  guildId: interaction.guildId ?? undefined,
+  meta: { tier: "gold" },
+});
+```
+
+## Design guarantees
+
+- Events are batched (flushed every 5 s or 100 events) and sent in the
+  background — `track()` never blocks or throws.
+- Transient failures retry with backoff; the queue is bounded (oldest dropped
+  first), so a dead Mochi instance can never leak memory or crash the bot.
+- Raw user ids are hashed server-side with a per-bot salt and never stored.
+
+<Callout type="info">
+  Everything above is a thin wrapper over two HTTP endpoints — see the
+  [Ingest API](/ingest-api) to integrate from any other framework.
+</Callout>
