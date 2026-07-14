@@ -4,7 +4,7 @@ description: Mochi tracks command usage, server growth, and bot health in one da
 ---
 
 import styles from '../components/landing.module.css'
-import { ShieldCheck, BarChart3, TrendingUp, Activity, Zap, Share2, Cloud, Server } from 'lucide-react'
+import { ShieldCheck, BarChart3, TrendingUp, Activity, Zap, Share2, Cloud, Server, MessagesSquare } from 'lucide-react'
 
 <div className={styles.landing}>
 
@@ -158,12 +158,19 @@ attachMochi(client, mochi);
   <h2 className={styles.sectionTitle}>Own your bot's analytics</h2>
   <p className={styles.sectionLead}>
     Spin up Mochi with Docker Compose and see your first events land in the
-    dashboard tonight.
+    dashboard tonight — or start on <a href="https://cloud.mochi.software">Mochi
+    Cloud</a> in seconds.
   </p>
   <div className={styles.ctaRow}>
     <a href="/self-hosting" className={styles.btnPrimary}>Get started</a>
     <a href="/introduction" className={styles.btnSecondary}>Read the docs</a>
+    <a href="https://discord.gg/59z89Ke4bt" className={styles.btnSecondary}>Join the Discord</a>
   </div>
+  <p className={styles.stepNote}>
+    <MessagesSquare aria-hidden style={{ verticalAlign: 'text-bottom', width: '1em', height: '1em' }} />{' '}
+    Questions, feature ideas, or just want to say hi? Our{' '}
+    <a href="https://discord.gg/59z89Ke4bt">Discord community</a> is the fastest way to reach us.
+  </p>
 </section>
 
 <aside className={styles.logoNote}>

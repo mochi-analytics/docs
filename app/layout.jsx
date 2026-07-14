@@ -15,6 +15,8 @@ export const metadata = {
   }
 }
 
+const discordInvite = 'https://discord.gg/59z89Ke4bt'
+
 const navbar = (
   <Navbar
     logo={
@@ -26,13 +28,17 @@ const navbar = (
       </span>
     }
     projectLink="https://github.com/mochi-analytics/mochi"
+    // Renders Nextra's built-in Discord icon in the navbar.
+    chatLink={discordInvite}
   />
 )
 
 const footer = (
   <Footer>
     <span>
-      AGPL-3.0 (server) · Apache-2.0 (SDKs) · © {new Date().getFullYear()} Mochi Analytics
+      <a href={discordInvite}>Discord</a> ·{' '}
+      <a href="https://github.com/mochi-analytics/mochi">GitHub</a> · AGPL-3.0
+      (server) · Apache-2.0 (SDKs) · © {new Date().getFullYear()} Mochi Analytics
     </span>
   </Footer>
 )
