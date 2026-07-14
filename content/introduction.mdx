@@ -3,12 +3,18 @@ title: Introduction
 description: Self-hosted analytics for Discord bots — command usage, server growth, and bot health in one dashboard.
 ---
 
-import { Cards } from 'nextra/components'
+import { Cards, Callout } from 'nextra/components'
 
 # Mochi
 
-Self-hosted analytics for Discord bots: command usage, server growth, and bot
-health in one dashboard. You run it, you own the data.
+Analytics for Discord bots: command usage, server growth, and bot health in one
+dashboard. Self-host it and own the data, or use the managed cloud.
+
+<Callout type="info">
+  **Don't want to self-host?** [Mochi Cloud](https://cloud.mochi.software) is a
+  fully managed, multi-tenant instance of the same open-source Mochi — sign in
+  with Discord and start sending events, no infrastructure required.
+</Callout>
 
 ## Features
 
@@ -48,6 +54,7 @@ graph LR
 ## Next steps
 
 <Cards num={2}>
+  <Cards.Card title="Mochi Cloud" href="https://cloud.mochi.software" arrow />
   <Cards.Card title="Self-Hosting" href="/self-hosting" arrow />
   <Cards.Card title="SDKs" href="/sdks" arrow />
   <Cards.Card title="Ingest API" href="/ingest-api" arrow />

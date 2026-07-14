@@ -4,7 +4,7 @@ description: Mochi tracks command usage, server growth, and bot health in one da
 ---
 
 import styles from '../components/landing.module.css'
-import { ShieldCheck, BarChart3, TrendingUp, Activity, Zap, Share2 } from 'lucide-react'
+import { ShieldCheck, BarChart3, TrendingUp, Activity, Zap, Share2, Cloud, Server } from 'lucide-react'
 
 <div className={styles.landing}>
 
@@ -19,13 +19,34 @@ import { ShieldCheck, BarChart3, TrendingUp, Activity, Zap, Share2 } from 'lucid
 
   <p className={styles.subtitle}>
     Mochi tracks command usage, server growth, and bot health in one dashboard.
-    You run it, you own the data — raw user ids are hashed with a per-bot salt
-    and never stored.
+    Self-host it and own the data, or use the managed cloud — either way, raw
+    user ids are hashed with a per-bot salt and never stored.
   </p>
 
   <div className={styles.ctaRow}>
-    <a href="/self-hosting" className={styles.btnPrimary}>Get started</a>
+    <a href="/self-hosting" className={styles.btnPrimary}>Self-host it</a>
+    <a href="https://cloud.mochi.software" className={styles.btnSecondary}>Try the cloud</a>
     <a href="https://github.com/mochi-analytics/mochi" className={styles.btnSecondary}>View on GitHub</a>
+  </div>
+</section>
+
+<section className={styles.cloudBanner}>
+  <div className={styles.cloudBannerMain}>
+    <span className={styles.cloudBadge} aria-hidden><Cloud /></span>
+    <div>
+      <h2 className={styles.cloudBannerTitle}>Don't want to run the infrastructure?</h2>
+      <p className={styles.cloudBannerText}>
+        <strong>Mochi Cloud</strong> is the same open-source Mochi, fully managed
+        and multi-tenant. Sign in with Discord, drop in an API key, and start
+        seeing events — no Postgres, no ClickHouse, no server to babysit.
+      </p>
+    </div>
+  </div>
+  <div className={styles.cloudBannerAside}>
+    <a href="https://cloud.mochi.software" className={styles.btnPrimary}>Open Mochi Cloud</a>
+    <span className={styles.cloudBannerNote}>
+      <Server aria-hidden /> Prefer to own the data? <a href="/self-hosting">Self-host</a> instead.
+    </span>
   </div>
 </section>
 
