@@ -47,6 +47,11 @@ export default async function RootLayout({ children }) {
         }}
       />
       <body>
+        <script
+          defer
+          src="https://umami.bwmp.dev/script.js"
+          data-website-id="46d16db1-996e-4fb2-95bd-cb922e5f1a83"
+        />
         <Layout
           navbar={navbar}
           footer={footer}
