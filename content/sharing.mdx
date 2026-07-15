@@ -66,6 +66,13 @@ back to `servers`.
 ![Commands](https://mochi.example.com/api/badge/0f9c4c2e-…?metric=commands&range=7d)
 ```
 
+Wrap a badge in a link to make it clickable — the settings page hands you this
+form so a reader can jump from your README to the full public dashboard:
+
+```md
+[![Servers](https://mochi.example.com/api/badge/0f9c4c2e-…)](https://mochi.example.com/share/0f9c4c2e-…)
+```
+
 ### shields.io
 
 `?format=shields` returns a [shields.io endpoint badge][endpoint] JSON payload
@@ -101,7 +108,8 @@ error rate — designed to be dropped into an iframe on a bot-list page.
 ></iframe>
 ```
 
-The card links back to the full public dashboard.
+The bot name links to the full public dashboard; the "stats by Mochi"
+attribution links to the Mochi project.
 
 <Callout type="info">
   Need the numbers as data rather than pixels? The [Stats API](/stats-api)

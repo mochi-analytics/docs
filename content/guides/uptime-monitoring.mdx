@@ -1,0 +1,102 @@
+---
+title: How to monitor Discord bot uptime and shard health
+description: Measure real Discord bot uptime with health snapshots and per-shard status, and get a Discord alert the moment your bot stops reporting — not when your users notice.
+---
+
+import { Callout, Cards } from 'nextra/components'
+
+# How to monitor Discord bot uptime and shard health
+
+A Discord bot can be "running" — process alive, no crash in the logs — and still
+be completely useless because its gateway connection dropped or one shard never
+reconnected. Uptime that matters isn't "is the process up?" but "is the bot
+connected and serving every shard?"
+
+This guide explains how to measure that, why the usual signals mislead you, and
+how Mochi turns it into a health dashboard plus an alert.
+
+## What uptime means for a bot
+
+Unlike a web server you can `GET /health`, a bot is a client of Discord's
+gateway. The things that actually determine whether it's working are:
+
+- **Gateway connection** — is each shard's WebSocket connected and
+  heartbeating?
+- **Per-shard status** — with sharding, one shard can die while the rest are
+  fine, leaving a slice of guilds unserved.
+- **Gateway ping** — a climbing WebSocket ping often precedes a disconnect.
+- **Reachability** — is the bot still checking in at all, or has it gone dark?
+
+## Why the obvious signals mislead
+
+- **Process uptime** (`process.uptime()`, your host's dashboard) only proves the
+  program is running, not that it's connected to Discord.
+- **A `ready` event** fires once. It tells you the bot connected at some point,
+  not that it's connected *now*.
+- **Join/leave events** are easy to reach for as a liveness proxy, but they're
+  bursty and unreliable: a bot that's offline simply misses them, so silence is
+  ambiguous — no traffic, or no bot?
+
+What you want is a positive heartbeat: the bot periodically reports "I'm here,
+here's my state," and monitoring watches for that signal to stop.
+
+## Health snapshots with Mochi
+
+Mochi's SDKs send a [health snapshot](/ingest-api#post-apiv1snapshot) on ready
+and then hourly — one per shard, carrying that shard's guild count, gateway
+ping, shard totals, and process CPU/memory:
+
+```json
+{ "guildCount": 1204, "shardId": 0, "totalShards": 2, "approximateMemberSum": 803210, "wsPingMs": 38, "cpuPercent": 24.5, "memoryMb": 312 }
+```
+
+If you use an SDK, this is automatic — `attachMochi` starts the snapshot loop
+for you. The snapshot interval is configurable:
+
+```ts
+attachMochi(client, mochi, {
+  snapshotIntervalMs: 30 * 60e3, // default is 1 hour
+});
+```
+
+Because snapshots are per-shard and periodic, they double as your uptime signal:
+the "servers over time" chart stays accurate even across restarts, and a shard
+that stops reporting stands out.
+
+<Callout type="info">
+  For a sharded bot, send one snapshot per shard with that shard's local
+  `guildCount`. Mochi sums the latest snapshot per shard, so the total stays
+  right even if one shard is mid-reconnect.
+</Callout>
+
+## Getting alerted when it goes down
+
+A dashboard only helps if you're looking at it. Mochi's
+[offline alert](/alerts#offline) watches the snapshot stream: when a bot stops
+checking in, that's a bot that looks down, and Mochi posts to a Discord webhook
+you configure — so the notification lands in the same place you already watch.
+
+Alerts also cover **error spikes** and **server drops**, and there's a weekly
+digest summarizing the numbers. See [Alerts & Digests](/alerts) for the full
+set and thresholds.
+
+## Reading it back
+
+The health dashboard shows per-shard status, gateway ping, uptime, and CPU/memory
+usage over time for the selected range. To pull uptime into a status command, the
+[Stats API](/stats-api) `overview` view returns `uptimePct` (and `null` when no
+snapshots landed in the range):
+
+```sh
+curl -H "Authorization: Bearer $MOCHI_API_KEY" \
+  "https://mochi.example.com/api/v1/stats/overview?range=30d"
+```
+
+## Next steps
+
+<Cards num={2}>
+  <Cards.Card title="Alerts & Digests" href="/alerts" arrow />
+  <Cards.Card title="Ingest API" href="/ingest-api" arrow />
+  <Cards.Card title="Stats API" href="/stats-api" arrow />
+  <Cards.Card title="Track command usage" href="/guides/track-command-usage" arrow />
+</Cards>

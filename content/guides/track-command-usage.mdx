@@ -1,0 +1,120 @@
+---
+title: How to track Discord bot command usage
+description: Capture which slash commands people actually run — counts, success rate, latency, and unique users — without writing your own counters or storing raw user ids.
+---
+
+import { Callout, Cards } from 'nextra/components'
+
+# How to track Discord bot command usage
+
+Once a bot is in more than a handful of servers, "which commands do people
+actually use?" stops being a guess you can afford. Usage data tells you what to
+invest in, what to deprecate, and — when a command's success rate quietly drops
+— that something broke before the bug reports arrive.
+
+This guide covers what's worth measuring, why the obvious approaches fall short,
+and how to get it in a few lines with Mochi.
+
+## What "command usage" actually means
+
+A single counter per command name isn't enough to act on. The metrics that
+change decisions are:
+
+- **Use count** — invocations over a window, so you can rank commands and spot
+  trends.
+- **Unique users** — 10,000 calls from 50 people is a very different feature
+  than 10,000 calls from 8,000 people.
+- **Success rate** — the share of invocations that finished without throwing. A
+  dip here is your earliest signal of a regression.
+- **Latency** — p50 and p95 execution time, so a slow command doesn't quietly
+  degrade the experience.
+- **Where** — guild vs. DM, and which shard, when you're debugging something
+  regional or shard-specific.
+
+## Why the do-it-yourself version gets painful
+
+The first instinct is a `Map<string, number>` incremented in your interaction
+handler. It works until it doesn't:
+
+- It's in memory, so a restart or a deploy resets everything.
+- It counts invocations, not outcomes — you can't tell success from failure or
+  measure duration without threading timing through every handler by hand.
+- "Unique users" means storing user ids, which turns your analytics into a pile
+  of personal data you now have to secure and justify (see
+  [privacy-friendly analytics](/guides/privacy-friendly-analytics)).
+- Putting it in a database means writing the schema, the aggregation queries,
+  and eventually a dashboard — a project in its own right.
+
+## Capturing it with Mochi
+
+Mochi records command usage as [`command` events](/ingest-api). The SDK wires
+this into your client, so an attached bot starts reporting immediately:
+
+```ts
+import { Client, GatewayIntentBits } from "discord.js";
+import { MochiClient } from "@mochi-analytics/core";
+import { attachMochi } from "@mochi-analytics/discordjs";
+
+const mochi = new MochiClient({
+  url: "https://mochi.example.com",
+  apiKey: process.env.MOCHI_API_KEY!,
+});
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+attachMochi(client, mochi);
+```
+
+That alone records every slash and context-menu command. Auto-tracking fires
+when the interaction arrives, though, so it can't see whether your handler
+succeeded or how long it took. For accurate **success** and **latency**, wrap
+the handler instead:
+
+```ts
+import { wrapHandler } from "@mochi-analytics/discordjs";
+
+attachMochi(client, mochi, { autoTrackCommands: false });
+
+const play = wrapHandler(mochi, async (interaction) => {
+  // your command logic — duration and thrown errors are recorded automatically
+});
+```
+
+<Callout type="info">
+  Not on discord.js? The same event shape works from any language over the raw
+  [Ingest API](/ingest-api), and there are first-party SDKs for
+  [discord.py](/sdks/discordpy), [discordgo](/sdks/go), and
+  [more](/sdks).
+</Callout>
+
+## Reading it back
+
+Command metrics show up on the dashboard ranked by use, each with success rate,
+unique users, and p50/p95 latency. To pull the same numbers into a `/stats`
+command or an external page, use the [Stats API](/stats-api):
+
+```sh
+curl -H "Authorization: Bearer $MOCHI_API_KEY" \
+  "https://mochi.example.com/api/v1/stats/commands?range=7d"
+```
+
+```json
+{
+  "range": "7d",
+  "commands": [
+    { "name": "play", "uses": 18402, "users": 5210, "successRate": 99.4, "p50": 88, "p95": 310 }
+  ]
+}
+```
+
+Raw user ids never touch disk — Mochi hashes them server-side with a per-bot
+salt before counting uniques, so "unique users" stays accurate without you
+holding personal data.
+
+## Next steps
+
+<Cards num={2}>
+  <Cards.Card title="discord.js SDK" href="/sdks/discordjs" arrow />
+  <Cards.Card title="Stats API" href="/stats-api" arrow />
+  <Cards.Card title="Privacy-friendly analytics" href="/guides/privacy-friendly-analytics" arrow />
+  <Cards.Card title="Uptime & shard health" href="/guides/uptime-monitoring" arrow />
+</Cards>

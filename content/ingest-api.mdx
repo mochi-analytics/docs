@@ -75,11 +75,16 @@ snapshots power the "servers over time" chart, which stays accurate even if
 join/leave events are missed while the bot is offline.
 
 ```json
-{ "guildCount": 1204, "shardId": 0, "totalShards": 2, "approximateMemberSum": 803210, "wsPingMs": 38 }
+{ "guildCount": 1204, "shardId": 0, "totalShards": 2, "approximateMemberSum": 803210, "wsPingMs": 38, "cpuPercent": 24.5, "memoryMb": 312 }
 ```
 
 For sharded bots, send one snapshot per shard with that shard's local
 `guildCount`; Mochi sums the latest snapshot per shard.
+
+`cpuPercent` (process CPU, normalized to 0–100 across all cores) and `memoryMb`
+(resident set size in whole megabytes) are optional and power the CPU/memory
+charts on the Health page. The SDKs measure both automatically on each snapshot;
+pass your own values to override, or omit them to record only guild counts.
 
 Snapshots are also what the [offline alert](/alerts#offline) watches: a bot that
 stops sending them is a bot that looks down.

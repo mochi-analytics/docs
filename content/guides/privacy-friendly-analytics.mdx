@@ -1,0 +1,93 @@
+---
+title: Privacy-friendly Discord bot analytics (hashing user ids)
+description: Count unique users and per-user activity without storing raw Discord ids. How salted, per-bot hashing keeps analytics useful while keeping personal data off your disk.
+---
+
+import { Callout, Cards } from 'nextra/components'
+
+# Privacy-friendly Discord bot analytics
+
+You can learn a lot about how a bot is used without keeping a list of who used
+it. The moment you store raw Discord user ids next to activity, though, your
+analytics table becomes a pile of personal data — something you have to secure,
+justify, and be ready to delete on request. This guide shows how to keep the
+useful signal (unique users, per-user activity) while leaving the personal part
+out.
+
+## The problem with raw ids
+
+A Discord user id is a stable, unique identifier for a real person. Store it
+alongside "ran `/play` 40 times in these guilds" and you've built a behavioral
+profile keyed to an account — exactly the kind of data privacy regimes like
+GDPR care about, and exactly the kind of table you don't want to be responsible
+for leaking.
+
+But you rarely need the id itself. The questions you actually ask are:
+
+- How many **unique** users ran this command?
+- Is this activity spread across many people or driven by a few?
+- Did the same user hit an error repeatedly?
+
+All of those need only a way to tell users *apart* — not a way to identify them.
+
+## Hashing, and why a plain hash isn't enough
+
+The fix is to replace the id with a one-way hash. Same id in, same hash out, so
+you can still count uniques and group by user; but the hash can't be read back
+into an id.
+
+A naïve `sha256(userId)` has a catch: the space of Discord snowflakes is small
+and predictable enough that anyone with your data could hash every candidate id
+and match them — a rainbow-table attack. The fix is a **secret salt** mixed in
+before hashing (`sha256(salt + userId)`). Without the salt, the hashes can't be
+reversed by brute force.
+
+Two more properties matter:
+
+- **Per-bot salts.** A separate salt per bot means hashes can't be correlated
+  across bots, even for the same person.
+- **Rotatable salts.** If a salt is ever exposed, rotating it makes the old
+  hashes meaningless — and it lets you deliberately sever the link between old
+  and new data.
+
+## How Mochi does it
+
+Mochi hashes user ids **server-side, with a per-bot salt, before anything
+touches disk**. The raw id arrives over TLS, is used to compute the hash, and is
+discarded — it's never written to the database.
+
+<Callout type="info">
+  This happens on the Mochi side of the wire, so you don't implement any of it.
+  Your bot sends the normal `userId` on each [event](/ingest-api); Mochi salts,
+  hashes, and stores only the digest.
+</Callout>
+
+Because the hash is stable per user per bot, the analytics that depend on
+identity still work — **unique user counts**, per-command reach, and
+affected-user counts on errors — while the dashboard and exports only ever
+contain opaque hashes.
+
+Each bot's settings expose **salt rotation**: rotating mints a new salt, so
+subsequent events hash into a fresh namespace and prior hashes can no longer be
+matched to new activity.
+
+## What you can and can't do with hashed ids
+
+| You can | You can't |
+|---|---|
+| Count unique users over any range | Recover a user's Discord id |
+| See per-command and per-error reach | Look up "what did user X do?" by id |
+| Compare concentration (few vs. many users) | Correlate a user across two bots |
+
+That trade is the point: you keep the aggregate insight and give up the ability
+to single out a person — which is usually exactly what you wanted from analytics
+anyway.
+
+## Next steps
+
+<Cards num={2}>
+  <Cards.Card title="Ingest API" href="/ingest-api" arrow />
+  <Cards.Card title="Self-hosting" href="/self-hosting" arrow />
+  <Cards.Card title="Track command usage" href="/guides/track-command-usage" arrow />
+  <Cards.Card title="Exports" href="/exports" arrow />
+</Cards>

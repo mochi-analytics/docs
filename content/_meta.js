@@ -12,6 +12,7 @@ export default {
     }
   },
   introduction: 'Introduction',
+  guides: 'Guides',
   'self-hosting': 'Self-Hosting',
   sdks: 'SDKs',
   'ingest-api': 'Ingest API',
