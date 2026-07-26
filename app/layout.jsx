@@ -15,7 +15,7 @@ export const metadata = {
   }
 }
 
-const discordInvite = 'https://discord.gg/59z89Ke4bt'
+const discordInvite = '/discord'
 
 const navbar = (
   <Navbar
