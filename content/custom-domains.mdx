@@ -1,0 +1,128 @@
+---
+title: Custom Domains
+description: Serve your Discord bot's public status page from your own subdomain — status.yourbot.com — with automatic HTTPS.
+---
+
+import { Callout } from 'nextra/components'
+
+# Custom Domains
+
+A bot's public dashboard normally lives at `/share/<shareId>`. With a custom
+domain it also answers on a subdomain you own:
+
+```text
+https://status.yourbot.com
+```
+
+Same page, your name on it, HTTPS handled for you. The page is indexed under
+your domain rather than ours — the [share URL](/sharing) points search engines
+at your domain once it goes live, so the two copies never compete.
+
+<Callout type="info">
+  Custom domains are a **Mochi Cloud** feature. Self-hosted instances already
+  answer on a hostname you control: point DNS at your server and Mochi serves
+  the share page there.
+</Callout>
+
+## Requirements
+
+- A **subdomain** you control, like `status.yourbot.com`. Apex domains
+  (`yourbot.com`) are not supported — the ownership proof is a CNAME, and an
+  apex record can't be one.
+- **Public sharing enabled** for the bot. The domain is a second address for
+  that page, not a second permission: turn sharing off and every custom domain
+  for the bot goes dark immediately.
+- One custom domain per bot.
+
+<Callout type="warning">
+  During launch, custom domains are limited to the **first 100 users** who claim
+  one, first come first served. Once the slots are gone the settings page says
+  so; more availability is coming.
+</Callout>
+
+## Setting one up
+
+**1. Claim the hostname.** Bot → **Settings → Custom domain**, enter
+`status.yourbot.com`, and press **Add domain**. Mochi assigns your claim its own
+target under our edge zone:
+
+```text
+mochi-k7x9q2.status-pages.mochi.software
+```
+
+That target is unique to this claim. Nobody else is ever given it, which is
+exactly why pointing your hostname at it proves the hostname is yours.
+
+**2. Add the DNS record** at your registrar:
+
+| Type | Name | Value |
+|---|---|---|
+| `CNAME` | `status` (or `status.yourbot.com`) | `mochi-k7x9q2.status-pages.mochi.software` |
+
+Registrars differ on the **Name** field: some want the full hostname, most want
+just the subdomain label. If your DNS is on Cloudflare, set the record to
+**DNS only** (grey cloud) — an orange-clouded record hides the CNAME behind
+Cloudflare's own proxy and the check can't see it.
+
+**3. Wait for the certificate.** Mochi re-checks DNS every few minutes (or
+immediately, via **Check now**). Once the record resolves we request the
+certificate; issuing usually takes 1–15 minutes, and the page goes live on its
+own.
+
+### Verifying with TXT instead
+
+If your DNS provider flattens or proxies CNAMEs, prove ownership with a TXT
+record instead:
+
+| Type | Name | Value |
+|---|---|---|
+| `TXT` | `_mochi-verify.status.yourbot.com` | the token shown in settings |
+
+The TXT record only proves ownership — traffic still has to reach us, so the
+hostname must resolve to your `mochi-…` target either way.
+
+## Status meanings
+
+| Status | What it means | What to do |
+|---|---|---|
+| **Waiting for DNS** | We can't see your record yet. Claims are released after 48 hours. | Check the record, then **Check now**. |
+| **Issuing certificate** | DNS is correct; the certificate is being issued. | Nothing — usually 1–15 minutes. |
+| **Live** | The domain is serving your status page. | — |
+| **Offline** | The record stopped pointing at us for more than 7 days. | Restore the record; it resumes on its own. |
+
+## When it isn't working
+
+Almost every problem is the DNS record, and one command tells you which:
+
+```sh
+dig status.yourbot.com CNAME +short
+```
+
+- **Returns your exact `mochi-…` target** → DNS is fine; the delay is
+  certificate issuance.
+- **Returns nothing** → the record is missing, still propagating, or proxied
+  (Cloudflare orange cloud). Grey-cloud it or use the TXT proof.
+- **Returns a different target** → the record points somewhere else, or an old
+  claim's target is still in place. Copy the target from the settings page again;
+  removing and re-adding a domain issues a **new** one.
+- **Returns an A record instead** → replace it with the CNAME. Pointing an A
+  record at an IP of ours won't verify and won't get a certificate.
+
+Some registrars cache aggressively. If `dig` shows the right answer but Mochi
+still says *Waiting for DNS*, give the record's TTL time to expire and press
+**Check now** again.
+
+## Removing a domain
+
+Remove it from the settings panel. The claim, its target, and the certificate
+are all released; the share URL keeps working. Deleting the bot removes its
+domain too.
+
+While the launch cap is in force, removing your last custom domain also returns
+your slot to the pool — if the 100 slots are full, someone else may take it
+before you claim again.
+
+<Callout type="info">
+  Removing and re-adding the same hostname issues a **fresh** target, so the old
+  DNS record stops verifying. Update the record when you re-add.
+</Callout>

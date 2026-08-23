@@ -19,6 +19,7 @@ export default {
   'stats-api': 'Stats API',
   alerts: 'Alerts & Digests',
   sharing: 'Sharing & Embeds',
+  'custom-domains': 'Custom Domains',
   exports: 'Exports',
   '---': {
     type: 'separator'

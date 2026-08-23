@@ -5,8 +5,8 @@ import 'nextra-theme-docs/style.css'
 
 export const metadata = {
   title: {
-    default: 'Mochi Docs',
-    template: '%s – Mochi'
+    default: 'Mochi Analytics for Discord Bots',
+    template: '%s – Mochi Analytics'
   },
   description: 'Self-hosted analytics for Discord bots — command usage, server growth, and bot health in one dashboard.',
   icons: {
@@ -24,7 +24,7 @@ const navbar = (
         {/* Plain <img>, not next/image: the optimizer is off under `output: 'export'`
             anyway, and an <img> lets the SVG's own prefers-color-scheme rules run. */}
         <img src="/logo.svg" alt="" width="28" height="28" />
-        Mochi
+        Mochi Analytics
       </span>
     }
     projectLink="https://github.com/mochi-analytics/mochi"
